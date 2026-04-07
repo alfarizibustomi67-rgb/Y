@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SalNew Super Mall - 100+ Items</title>
+    <title>SalNew Gadget Store - 100 Smartphone</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, get, update, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Konfigurasi Firebase tetap sama
         const firebaseConfig = {
             apiKey: "AIzaSyCbJjwhgy_zZAfmUKTWez1aH4wE2icA6dg",
             authDomain: "salnew.firebaseapp.com",
@@ -23,20 +22,30 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- DATABASE 100 BARANG OTOMATIS ---
         const products = [];
         
-        // 1. Tambah Diamond Free Fire (1-40)
-        for(let i=1; i<=40; i++) {
-            products.push({ id: i, name: `${i*5} Diamond FF`, price: i*1000, img: "💎" });
+        // 1. GENERATE 50 IPHONE (ID 1-50)
+        const iphoneModels = ["iPhone 11", "iPhone 12", "iPhone 13", "iPhone 14", "iPhone 15 Pro", "iPhone 16 Pro Max"];
+        for(let i=1; i<=50; i++) {
+            let model = iphoneModels[i % iphoneModels.length];
+            products.push({ 
+                id: i, 
+                name: `${model} - SULTAN ${i}`, 
+                price: 7000000 + (i * 200000), 
+                img: "🍎" 
+            });
         }
-        // 2. Tambah Mobile Legends (41-70)
-        for(let i=41; i<=70; i++) {
-            products.push({ id: i, name: `${(i-40)*10} DM Mobile Legends`, price: (i-40)*2500, img: "⚔️" });
-        }
-        // 3. Tambah Voucher Game & Pulsa (71-100)
-        for(let i=71; i<=100; i++) {
-            products.push({ id: i, name: `Voucher Game Seri ${i}`, price: i*500, img: "🎁" });
+
+        // 2. GENERATE 50 ANDROID (ID 51-100) - VIVO, OPPO, ROG
+        const androidBrands = ["Vivo Y16", "Oppo Reno 10", "ROG Phone 8", "Vivo V29", "Oppo Find X6", "ROG Phone 7 Ultimate"];
+        for(let i=51; i<=100; i++) {
+            let brand = androidBrands[i % androidBrands.length];
+            products.push({ 
+                id: i, 
+                name: `${brand} - SULTAN ${i}`, 
+                price: 2000000 + (i * 150000), 
+                img: "📱" 
+            });
         }
 
         window.onload = () => {
@@ -44,10 +53,10 @@
             products.forEach(p => {
                 list.innerHTML += `
                     <div class="product-card">
-                        <div style="font-size:30px;">${p.img}</div>
+                        <div style="font-size:40px;">${p.img}</div>
                         <h3>${p.name}</h3>
-                        <p>Rp ${p.price.toLocaleString()}</p>
-                        <button class="btn-buy" onclick="checkout(${p.id})">BELI</button>
+                        <p>Rp ${p.price.toLocaleString('id-ID')}</p>
+                        <button class="btn-buy" onclick="checkout(${p.id})">BELI SEKARANG</button>
                     </div>
                 `;
             });
@@ -56,12 +65,12 @@
         window.checkout = async function(id) {
             const item = products.find(p => p.id === id);
             const { value: phone } = await Swal.fire({
-                title: 'Bayar Pakai SalNew',
-                text: `Beli ${item.name} seharga Rp ${item.price.toLocaleString()}?`,
+                title: 'Metode Pembayaran: SalNew',
+                text: `Beli ${item.name} seharga Rp ${item.price.toLocaleString('id-ID')}?`,
                 input: 'text',
-                inputPlaceholder: 'Nomor HP SalNew kamu (08...)',
+                inputPlaceholder: 'Nomor HP SalNew kamu',
                 showCancelButton: true,
-                confirmButtonText: 'KONFIRMASI BAYAR',
+                confirmButtonText: 'BAYAR SEKARANG',
                 confirmButtonColor: '#108ee9'
             });
 
@@ -73,38 +82,40 @@
                     if (saldo >= item.price) {
                         await update(userRef, { saldo: saldo - item.price });
                         await push(ref(db, 'history/' + phone), {
-                            type: 'BELI BARANG',
+                            type: 'BELI HP',
                             amt: item.price,
                             note: item.name,
                             date: new Date().toLocaleString()
                         });
-                        Swal.fire('Sukses!', 'Barang berhasil dibeli!', 'success');
-                    } else { Swal.fire('Gagal', 'Saldo Sultan tidak cukup!', 'error'); }
+                        Swal.fire('Sukses!', 'Smartphone Sultan berhasil dibeli!', 'success');
+                    } else { Swal.fire('Gagal', 'Saldo SalNew tidak cukup!', 'error'); }
                 } else { Swal.fire('Error', 'Nomor tidak terdaftar!', 'error'); }
             }
         };
     </script>
     <style>
         body { background: #f0f2f5; font-family: sans-serif; padding: 10px; margin: 0; }
-        .header { background: #108ee9; color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .product-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        .product-card h3 { font-size: 12px; margin: 10px 0; height: 30px; overflow: hidden; }
-        .product-card p { color: #108ee9; font-weight: bold; font-size: 14px; }
-        .btn-buy { width: 100%; border: none; background: #108ee9; color: white; padding: 8px; border-radius: 8px; margin-top: 5px; font-weight: bold; cursor: pointer; }
-        #search-bar { width: 95%; padding: 12px; margin: 0 auto 15px auto; display: block; border-radius: 10px; border: 1px solid #ddd; outline: none; }
+        .header { background: linear-gradient(135deg, #108ee9, #003366); color: white; padding: 25px; text-align: center; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .product-card { background: white; padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .product-card h3 { font-size: 13px; margin: 10px 0; height: 35px; color: #333; }
+        .product-card p { color: #ff4757; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
+        .btn-buy { width: 100%; border: none; background: #108ee9; color: white; padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-buy:active { transform: scale(0.95); }
+        #search-bar { width: 90%; padding: 14px; margin: 0 auto 20px auto; display: block; border-radius: 15px; border: 2px solid #108ee9; outline: none; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2 style="margin:0;">SalNew Super Mall</h2>
-        <p style="font-size:12px; opacity:0.8;">Metode Pembayaran: Saldo SalNew</p>
+        <h2 style="margin:0;">SalNew Gadget Store</h2>
+        <p style="font-size:12px; opacity:0.8; margin-top:5px;">Pusat Smartphone Sultan Terlengkap</p>
     </div>
 
-    <input type="text" id="search-bar" placeholder="Cari item sultan..." onkeyup="filterProduct()">
+    <input type="text" id="search-bar" placeholder="Cari iPhone, Vivo, ROG..." onkeyup="filterProduct()">
 
-    <div class="grid" id="product-list"></div>
+    <div class="grid" id="product-list">
+        </div>
 
     <script>
         function filterProduct() {
