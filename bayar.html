@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pembayaran SalNew</title>
+    <title>SalNew Sultan Shop</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -22,78 +22,88 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        window.prosesBayar = async function() {
-            const phone = document.getElementById('my-phone').value;
-            const amount = parseInt(document.getElementById('pay-amount').value);
-            const note = document.getElementById('pay-note').value || "Pembayaran";
+        // DATA BARANG (Bisa kamu ganti harganya)
+        const products = [
+            { id: 1, name: "Diamond Free Fire", price: 10000, img: "💎" },
+            { id: 2, name: "Pulsa 5rb", price: 6000, img: "📱" },
+            { id: 3, name: "Es Teh Sultan", price: 5000, img: "🥤" }
+        ];
 
-            if (!phone || !amount || amount <= 0) {
-                return Swal.fire('Error', 'Data tidak lengkap!', 'error');
-            }
+        // TAMPILKAN BARANG
+        window.onload = () => {
+            const list = document.getElementById('product-list');
+            products.forEach(p => {
+                list.innerHTML += `
+                    <div class="product-card">
+                        <div style="font-size:40px;">${p.img}</div>
+                        <h3>${p.name}</h3>
+                        <p>Rp ${p.price.toLocaleString()}</p>
+                        <button class="btn-buy" onclick="checkout(${p.id})">BELI SEKARANG</button>
+                    </div>
+                `;
+            });
+        };
 
-            const userRef = ref(db, 'users/' + phone);
+        window.checkout = async function(id) {
+            const item = products.find(p => p.id === id);
             
-            try {
-                const snapshot = await get(userRef);
-                if (snapshot.exists()) {
-                    const userData = snapshot.val();
-                    
-                    // CEK SALDO CUKUP ATAU TIDAK
-                    if (userData.saldo >= amount) {
-                        const newSaldo = userData.saldo - amount;
-                        
-                        // 1. POTONG SALDO
-                        await update(userRef, { saldo: newSaldo });
+            const { value: phone } = await Swal.fire({
+                title: 'Konfirmasi Pembayaran',
+                text: `Beli ${item.name} seharga Rp ${item.price.toLocaleString()}`,
+                input: 'text',
+                inputLabel: 'Masukkan Nomor HP SalNew kamu',
+                inputPlaceholder: '08...',
+                showCancelButton: true,
+                confirmButtonText: 'Bayar Pakai SalNew',
+                confirmButtonColor: '#108ee9'
+            });
 
-                        // 2. CATAT DI RIWAYAT (HISTORY)
-                        const historyRef = ref(db, 'history/' + phone);
-                        await push(historyRef, {
-                            type: 'BAYAR',
-                            amt: amount,
-                            note: note,
-                            date: new Date().toLocaleString('id-ID')
-                        });
-
-                        Swal.fire({
-                            title: 'Pembayaran Berhasil!',
-                            text: `Saldo kamu terpotong Rp ${amount.toLocaleString()}. Sisa saldo: Rp ${newSaldo.toLocaleString()}`,
-                            icon: 'success'
-                        });
-                        
-                        document.getElementById('pay-amount').value = "";
-                        document.getElementById('pay-note').value = "";
-                    } else {
-                        Swal.fire('Gagal', 'Saldo Sultan kamu tidak cukup!', 'error');
-                    }
-                } else {
-                    Swal.fire('Error', 'Nomor HP tidak terdaftar!', 'error');
-                }
-            } catch (error) {
-                alert("Error: " + error.message);
+            if (phone) {
+                prosesTransaksi(phone, item);
             }
         };
+
+        async function prosesTransaksi(phone, item) {
+            const userRef = ref(db, 'users/' + phone);
+            const snap = await get(userRef);
+
+            if (snap.exists()) {
+                const saldo = snap.val().saldo;
+                if (saldo >= item.price) {
+                    // POTONG SALDO
+                    await update(userRef, { saldo: saldo - item.price });
+                    // SIMPAN RIWAYAT
+                    await push(ref(db, 'history/' + phone), {
+                        type: 'BELI BARANG',
+                        amt: item.price,
+                        note: item.name,
+                        date: new Date().toLocaleString()
+                    });
+
+                    Swal.fire('Berhasil!', `${item.name} sudah dibeli. Sisa saldo: Rp ${(saldo - item.price).toLocaleString()}`, 'success');
+                } else {
+                    Swal.fire('Gagal', 'Saldo Sultan kamu kurang!', 'error');
+                }
+            } else {
+                Swal.fire('Error', 'Nomor HP tidak terdaftar!', 'error');
+            }
+        }
     </script>
     <style>
-        body { background: #f4f7f6; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .pay-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
-        h2 { color: #108ee9; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; outline: none; }
-        .btn-pay { width: 100%; padding: 15px; background: #2ecc71; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        body { background: #f0f2f5; font-family: sans-serif; padding: 20px; }
+        h2 { text-align: center; color: #108ee9; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .product-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .product-card h3 { font-size: 14px; margin: 10px 0; }
+        .product-card p { color: #ff4757; font-weight: bold; }
+        .btn-buy { width: 100%; border: none; background: #108ee9; color: white; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="pay-box">
-    <h2>Bayar Pakai SalNew</h2>
-    <p style="font-size: 12px; color: #777; margin-bottom: 10px;">Saldo akan dipotong otomatis dari akunmu</p>
-    
-    <input type="text" id="my-phone" placeholder="Masukkan Nomor HP-mu">
-    <input type="number" id="pay-amount" placeholder="Nominal Bayar (Rp)">
-    <input type="text" id="pay-note" placeholder="Keterangan (Contoh: Beli Es)">
-    
-    <button class="btn-pay" onclick="prosesBayar()">KONFIRMASI BAYAR</button>
-</div>
+    <h2>SalNew Sultan Shop</h2>
+    <div class="grid" id="product-list">
+        </div>
 
 </body>
 </html>
-
