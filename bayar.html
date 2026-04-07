@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pembayaran SalNew</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, get, update, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbJjwhgy_zZAfmUKTWez1aH4wE2icA6dg",
+            authDomain: "salnew.firebaseapp.com",
+            databaseURL: "https://salnew-default-rtdb.firebaseio.com",
+            projectId: "salnew",
+            storageBucket: "salnew.firebasestorage.app",
+            messagingSenderId: "542817424491",
+            appId: "1:542817424491:web:d04abd155d47cb29c8cd2e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.prosesBayar = async function() {
+            const phone = document.getElementById('my-phone').value;
+            const amount = parseInt(document.getElementById('pay-amount').value);
+            const note = document.getElementById('pay-note').value || "Pembayaran";
+
+            if (!phone || !amount || amount <= 0) {
+                return Swal.fire('Error', 'Data tidak lengkap!', 'error');
+            }
+
+            const userRef = ref(db, 'users/' + phone);
+            
+            try {
+                const snapshot = await get(userRef);
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    
+                    // CEK SALDO CUKUP ATAU TIDAK
+                    if (userData.saldo >= amount) {
+                        const newSaldo = userData.saldo - amount;
+                        
+                        // 1. POTONG SALDO
+                        await update(userRef, { saldo: newSaldo });
+
+                        // 2. CATAT DI RIWAYAT (HISTORY)
+                        const historyRef = ref(db, 'history/' + phone);
+                        await push(historyRef, {
+                            type: 'BAYAR',
+                            amt: amount,
+                            note: note,
+                            date: new Date().toLocaleString('id-ID')
+                        });
+
+                        Swal.fire({
+                            title: 'Pembayaran Berhasil!',
+                            text: `Saldo kamu terpotong Rp ${amount.toLocaleString()}. Sisa saldo: Rp ${newSaldo.toLocaleString()}`,
+                            icon: 'success'
+                        });
+                        
+                        document.getElementById('pay-amount').value = "";
+                        document.getElementById('pay-note').value = "";
+                    } else {
+                        Swal.fire('Gagal', 'Saldo Sultan kamu tidak cukup!', 'error');
+                    }
+                } else {
+                    Swal.fire('Error', 'Nomor HP tidak terdaftar!', 'error');
+                }
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        };
+    </script>
+    <style>
+        body { background: #f4f7f6; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .pay-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
+        h2 { color: #108ee9; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; outline: none; }
+        .btn-pay { width: 100%; padding: 15px; background: #2ecc71; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="pay-box">
+    <h2>Bayar Pakai SalNew</h2>
+    <p style="font-size: 12px; color: #777; margin-bottom: 10px;">Saldo akan dipotong otomatis dari akunmu</p>
+    
+    <input type="text" id="my-phone" placeholder="Masukkan Nomor HP-mu">
+    <input type="number" id="pay-amount" placeholder="Nominal Bayar (Rp)">
+    <input type="text" id="pay-note" placeholder="Keterangan (Contoh: Beli Es)">
+    
+    <button class="btn-pay" onclick="prosesBayar()">KONFIRMASI BAYAR</button>
+</div>
+
+</body>
+</html>
+
