@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SalNew Sultan Shop</title>
+    <title>SalNew Super Mall - 100+ Items</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, get, update, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+        // Konfigurasi Firebase tetap sama
         const firebaseConfig = {
             apiKey: "AIzaSyCbJjwhgy_zZAfmUKTWez1aH4wE2icA6dg",
             authDomain: "salnew.firebaseapp.com",
@@ -22,23 +23,31 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // DATA BARANG (Bisa kamu ganti harganya)
-        const products = [
-            { id: 1, name: "Diamond Free Fire", price: 10000, img: "💎" },
-            { id: 2, name: "Pulsa 5rb", price: 6000, img: "📱" },
-            { id: 3, name: "Es Teh Sultan", price: 5000, img: "🥤" }
-        ];
+        // --- DATABASE 100 BARANG OTOMATIS ---
+        const products = [];
+        
+        // 1. Tambah Diamond Free Fire (1-40)
+        for(let i=1; i<=40; i++) {
+            products.push({ id: i, name: `${i*5} Diamond FF`, price: i*1000, img: "💎" });
+        }
+        // 2. Tambah Mobile Legends (41-70)
+        for(let i=41; i<=70; i++) {
+            products.push({ id: i, name: `${(i-40)*10} DM Mobile Legends`, price: (i-40)*2500, img: "⚔️" });
+        }
+        // 3. Tambah Voucher Game & Pulsa (71-100)
+        for(let i=71; i<=100; i++) {
+            products.push({ id: i, name: `Voucher Game Seri ${i}`, price: i*500, img: "🎁" });
+        }
 
-        // TAMPILKAN BARANG
         window.onload = () => {
             const list = document.getElementById('product-list');
             products.forEach(p => {
                 list.innerHTML += `
                     <div class="product-card">
-                        <div style="font-size:40px;">${p.img}</div>
+                        <div style="font-size:30px;">${p.img}</div>
                         <h3>${p.name}</h3>
                         <p>Rp ${p.price.toLocaleString()}</p>
-                        <button class="btn-buy" onclick="checkout(${p.id})">BELI SEKARANG</button>
+                        <button class="btn-buy" onclick="checkout(${p.id})">BELI</button>
                     </div>
                 `;
             });
@@ -46,64 +55,67 @@
 
         window.checkout = async function(id) {
             const item = products.find(p => p.id === id);
-            
             const { value: phone } = await Swal.fire({
-                title: 'Konfirmasi Pembayaran',
-                text: `Beli ${item.name} seharga Rp ${item.price.toLocaleString()}`,
+                title: 'Bayar Pakai SalNew',
+                text: `Beli ${item.name} seharga Rp ${item.price.toLocaleString()}?`,
                 input: 'text',
-                inputLabel: 'Masukkan Nomor HP SalNew kamu',
-                inputPlaceholder: '08...',
+                inputPlaceholder: 'Nomor HP SalNew kamu (08...)',
                 showCancelButton: true,
-                confirmButtonText: 'Bayar Pakai SalNew',
+                confirmButtonText: 'KONFIRMASI BAYAR',
                 confirmButtonColor: '#108ee9'
             });
 
             if (phone) {
-                prosesTransaksi(phone, item);
+                const userRef = ref(db, 'users/' + phone);
+                const snap = await get(userRef);
+                if (snap.exists()) {
+                    const saldo = snap.val().saldo;
+                    if (saldo >= item.price) {
+                        await update(userRef, { saldo: saldo - item.price });
+                        await push(ref(db, 'history/' + phone), {
+                            type: 'BELI BARANG',
+                            amt: item.price,
+                            note: item.name,
+                            date: new Date().toLocaleString()
+                        });
+                        Swal.fire('Sukses!', 'Barang berhasil dibeli!', 'success');
+                    } else { Swal.fire('Gagal', 'Saldo Sultan tidak cukup!', 'error'); }
+                } else { Swal.fire('Error', 'Nomor tidak terdaftar!', 'error'); }
             }
         };
-
-        async function prosesTransaksi(phone, item) {
-            const userRef = ref(db, 'users/' + phone);
-            const snap = await get(userRef);
-
-            if (snap.exists()) {
-                const saldo = snap.val().saldo;
-                if (saldo >= item.price) {
-                    // POTONG SALDO
-                    await update(userRef, { saldo: saldo - item.price });
-                    // SIMPAN RIWAYAT
-                    await push(ref(db, 'history/' + phone), {
-                        type: 'BELI BARANG',
-                        amt: item.price,
-                        note: item.name,
-                        date: new Date().toLocaleString()
-                    });
-
-                    Swal.fire('Berhasil!', `${item.name} sudah dibeli. Sisa saldo: Rp ${(saldo - item.price).toLocaleString()}`, 'success');
-                } else {
-                    Swal.fire('Gagal', 'Saldo Sultan kamu kurang!', 'error');
-                }
-            } else {
-                Swal.fire('Error', 'Nomor HP tidak terdaftar!', 'error');
-            }
-        }
     </script>
     <style>
-        body { background: #f0f2f5; font-family: sans-serif; padding: 20px; }
-        h2 { text-align: center; color: #108ee9; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .product-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .product-card h3 { font-size: 14px; margin: 10px 0; }
-        .product-card p { color: #ff4757; font-weight: bold; }
-        .btn-buy { width: 100%; border: none; background: #108ee9; color: white; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; cursor: pointer; }
+        body { background: #f0f2f5; font-family: sans-serif; padding: 10px; margin: 0; }
+        .header { background: #108ee9; color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .product-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .product-card h3 { font-size: 12px; margin: 10px 0; height: 30px; overflow: hidden; }
+        .product-card p { color: #108ee9; font-weight: bold; font-size: 14px; }
+        .btn-buy { width: 100%; border: none; background: #108ee9; color: white; padding: 8px; border-radius: 8px; margin-top: 5px; font-weight: bold; cursor: pointer; }
+        #search-bar { width: 95%; padding: 12px; margin: 0 auto 15px auto; display: block; border-radius: 10px; border: 1px solid #ddd; outline: none; }
     </style>
 </head>
 <body>
 
-    <h2>SalNew Sultan Shop</h2>
-    <div class="grid" id="product-list">
-        </div>
+    <div class="header">
+        <h2 style="margin:0;">SalNew Super Mall</h2>
+        <p style="font-size:12px; opacity:0.8;">Metode Pembayaran: Saldo SalNew</p>
+    </div>
+
+    <input type="text" id="search-bar" placeholder="Cari item sultan..." onkeyup="filterProduct()">
+
+    <div class="grid" id="product-list"></div>
+
+    <script>
+        function filterProduct() {
+            let input = document.getElementById('search-bar').value.toLowerCase();
+            let cards = document.getElementsByClassName('product-card');
+            for (let i = 0; i < cards.length; i++) {
+                let name = cards[i].getElementsByTagName('h3')[0].innerText.toLowerCase();
+                cards[i].style.display = name.includes(input) ? "block" : "none";
+            }
+        }
+    </script>
 
 </body>
 </html>
